@@ -285,18 +285,27 @@
     // ========== YES/NO 功能 ==========
     let yyYesNoMode = false;
 
-    const YY_YESNO_REPLIES = [
-        '✦ 𝒀𝑬𝑺 ✦',
-        '✦ 𝒀𝑬𝑺 ✦',
-        '─ 𝒀𝑬𝑺 ─',
-        '⟡ 𝒀𝑬𝑺 ⟡',
-        '✧ 𝑵𝑶 ✧',
-        '✧ 𝑵𝑶 ✧',
-        '─ 𝑵𝑶 ─',
-        '⟡ 𝑵𝑶 ⟡',
-        '░▒▓ 𝑺𝑰𝑮𝑵𝑨𝑳 𝑳𝑶𝑺𝑻 ▓▒░',
-        '▓▒░ 𝑪𝑶𝑵𝑵𝑬𝑪𝑻𝑰𝑶𝑵 𝑭𝑨𝑰𝑳𝑬𝑫 ░▒▓'
-    ];
+    function yyHideTyping() {
+        try {
+            if (window._typingIndicatorAutoHideTimer) {
+                clearTimeout(window._typingIndicatorAutoHideTimer);
+                window._typingIndicatorAutoHideTimer = null;
+            }
+        } catch(e) {}
+        var tiW = document.getElementById('typing-indicator-wrapper');
+        if (tiW) {
+            var tiInner = tiW.querySelector('.typing-indicator');
+            if (tiInner) {
+                tiInner.classList.add('hiding');
+                setTimeout(function() {
+                    tiW.style.display = 'none';
+                    if (tiInner) tiInner.classList.remove('hiding');
+                }, 240);
+            } else {
+                tiW.style.display = 'none';
+            }
+        }
+    }
 
     function initYesNoButton() {
         const waitInput = setInterval(() => {
@@ -329,76 +338,7 @@
             if (textarea) {
                 inputArea.insertBefore(btn, textarea);
             }
-
-            // 监听发送：拦截 send 按钮和回车
-            const sendBtn = document.getElementById('send-btn');
-            if (sendBtn) {
-                sendBtn.addEventListener('click', handleYesNo, true);
-            }
-            if (textarea) {
-                textarea.addEventListener('keydown', function(e) {
-                    if (e.key === 'Enter' && !e.shiftKey && yyYesNoMode) {
-                        handleYesNo(e);
-                    }
-                }, true);
-            }
         }, 500);
-    }
-
-    function handleYesNo(e) {
-        if (!yyYesNoMode) return; // 非YES/NO模式，不拦截
-
-        const textarea = document.getElementById('message-input');
-        const text = textarea ? textarea.value.trim() : '';
-        if (!text) return; // 没输入内容就不管
-
-        e.stopImmediatePropagation();
-        e.preventDefault();
-
-        // 先把用户消息发出去
-        const name = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
-        if (typeof addMessage === 'function') {
-            addMessage({
-                id: Date.now(),
-                sender: 'user',
-                text: text,
-                timestamp: new Date(),
-                status: 'sent',
-                favorited: false,
-                note: null,
-                type: 'normal'
-            });
-            if (typeof playSound === 'function') playSound('send');
-        }
-        textarea.value = '';
-        textarea.style.height = '46px';
-
-        // 延迟一下，直接回复YES/NO
-        const reply = YY_YESNO_REPLIES[Math.floor(Math.random() * YY_YESNO_REPLIES.length)];
-        setTimeout(() => {
-            if (typeof addMessage === 'function') {
-                addMessage({
-                    id: Date.now() + 9999,
-                    sender: name,
-                    text: reply,
-                    timestamp: new Date(),
-                    status: 'received',
-                    favorited: false,
-                    note: null,
-                    type: 'normal'
-                });
-                if (typeof playSound === 'function') playSound('message');
-            }
-        }, 500 + Math.random() * 1000);
-
-        // 关闭模式
-        yyYesNoMode = false;
-        const btn = document.getElementById('yy-yesno-btn');
-        if (btn) {
-            btn.style.background = 'transparent';
-            btn.style.color = 'var(--text-secondary,#999)';
-            btn.style.borderColor = 'var(--border-color,#ddd)';
-        }
     }
 
 
@@ -408,6 +348,53 @@
         if (!orig) return;
 
         window.simulateReply = function() {
+            // YES/NO模式：走原版流程显示typing，但回复内容替换为YES/NO
+            if (yyYesNoMode) {
+                const name = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
+                // 概率：YES 40%, NO 40%, SIGNAL LOST 20%
+                const roll = Math.random();
+                let reply;
+                if (roll < 0.4) {
+                    reply = '✦ 𝒀𝑬𝑺 ✦';
+                } else if (roll < 0.8) {
+                    reply = '✧ 𝑵𝑶 ✧';
+                } else {
+                    reply = '░▒▓ 𝑺𝑰𝑮𝑵𝑨𝑳 𝑳𝑶𝑺𝑻 ▓▒░';
+                }
+
+                // 用原版的延迟范围
+                const delayMin = (typeof settings !== 'undefined' && settings.replyDelayMin) || 1500;
+                const delayMax = (typeof settings !== 'undefined' && settings.replyDelayMax) || 4000;
+                const delay = delayMin + Math.random() * (delayMax - delayMin);
+
+                setTimeout(() => {
+                    yyHideTyping();
+                    if (typeof addMessage === 'function') {
+                        addMessage({
+                            id: Date.now() + 9999,
+                            sender: name,
+                            text: reply,
+                            timestamp: new Date(),
+                            status: 'received',
+                            favorited: false,
+                            note: null,
+                            type: 'normal'
+                        });
+                        if (typeof playSound === 'function') playSound('message');
+                    }
+                }, delay);
+
+                // 关闭模式
+                yyYesNoMode = false;
+                const btn = document.getElementById('yy-yesno-btn');
+                if (btn) {
+                    btn.style.background = 'transparent';
+                    btn.style.color = 'var(--text-secondary,#999)';
+                    btn.style.borderColor = 'var(--border-color,#ddd)';
+                }
+                return;
+            }
+
             orig();
             // emoji蹦出
             if (Math.random() < EMOJI_CHANCE) {
