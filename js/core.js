@@ -2257,7 +2257,9 @@ function showModal(modalElement, focusElement = null) {
                 console.error('[getStorageKey] SESSION_ID 尚未初始化，拒绝生成存储键:', baseKey);
                 throw new Error('SESSION_ID 未初始化，存储操作已中止');
             }
-            return `${APP_PREFIX}${SESSION_ID}_${baseKey}`;
+            // 按项目路径隔离数据，不同 GitHub Pages 项目互不干扰
+            const projectPath = window.location.pathname.split('/')[1] || 'default';
+            return `${APP_PREFIX}${projectPath}_${SESSION_ID}_${baseKey}`;
         }
 
         async function migrateData() {
