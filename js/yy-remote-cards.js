@@ -45,13 +45,11 @@
                 const groups = [];
                 const allGroupItems = [];
                 for (const [groupName, items] of Object.entries(remoteCards.chat_groups)) {
-                    // 如果之前 mute 过这个组，保留 mute 状态
                     const wasDisabled = disabledMap.hasOwnProperty(groupName) ? disabledMap[groupName] : false;
                     groups.push({ name: groupName, items: items, disabled: wasDisabled });
                     allGroupItems.push(...items);
                 }
                 window.customReplyGroups = groups;
-                // 分组里的字卡也要在总池里，否则原版过滤逻辑会跳过它们
                 const existingSet = new Set(customReplies);
                 allGroupItems.forEach(item => {
                     if (!existingSet.has(item)) {
@@ -62,6 +60,14 @@
                 window._customReplies = customReplies;
             }
 
+            // 写入 localforage，让配置页面能读到
+            if (typeof localforage !== 'undefined' && typeof getStorageKey === 'function') {
+                try {
+                    localforage.setItem(getStorageKey('customReplies'), customReplies);
+                    localforage.setItem(getStorageKey('customReplyGroups'), window.customReplyGroups || []);
+                } catch(e) {}
+            }
+
             if (remoteCards.emoji) window._remoteEmojis = remoteCards.emoji;
             if (remoteCards.statuses) window._remoteStatuses = remoteCards.statuses;
             if (remoteCards.moods) window._remoteMoods = remoteCards.moods;
@@ -69,31 +75,28 @@
 
             // 拍一拍
             if (remoteCards.pokes) {
-                if (typeof customPokes !== 'undefined') {
-                    customPokes.length = 0;
-                    customPokes.push(...remoteCards.pokes);
-                } else {
-                    window.customPokes = [...remoteCards.pokes];
+                customPokes.length = 0;
+                customPokes.push(...remoteCards.pokes);
+                if (typeof localforage !== 'undefined' && typeof getStorageKey === 'function') {
+                    try { localforage.setItem(getStorageKey('customPokes'), customPokes); } catch(e) {}
                 }
             }
 
             // 状态（公告页用）
             if (remoteCards.statuses) {
-                if (typeof customStatuses !== 'undefined') {
-                    customStatuses.length = 0;
-                    customStatuses.push(...remoteCards.statuses);
-                } else {
-                    window.customStatuses = [...remoteCards.statuses];
+                customStatuses.length = 0;
+                customStatuses.push(...remoteCards.statuses);
+                if (typeof localforage !== 'undefined' && typeof getStorageKey === 'function') {
+                    try { localforage.setItem(getStorageKey('customStatuses'), customStatuses); } catch(e) {}
                 }
             }
 
             // 每日寄语（从神谕池）
             if (remoteCards.oracle_motto) {
-                if (typeof customMottos !== 'undefined') {
-                    customMottos.length = 0;
-                    customMottos.push(...remoteCards.oracle_motto);
-                } else {
-                    window.customMottos = [...remoteCards.oracle_motto];
+                customMottos.length = 0;
+                customMottos.push(...remoteCards.oracle_motto);
+                if (typeof localforage !== 'undefined' && typeof getStorageKey === 'function') {
+                    try { localforage.setItem(getStorageKey('customMottos'), customMottos); } catch(e) {}
                 }
             }
 
