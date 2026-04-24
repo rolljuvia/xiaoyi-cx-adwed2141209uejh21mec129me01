@@ -395,6 +395,45 @@
                 return;
             }
 
+            // 表情包互动：用户发了表情包（有image无text），对方只回一张表情包
+            if (typeof messages !== 'undefined' && typeof stickerLibrary !== 'undefined') {
+                const lastMsg = messages[messages.length - 1];
+                if (lastMsg && lastMsg.sender === 'user' && lastMsg.image && !lastMsg.text) {
+                    let disabledStickerItems = new Set();
+                    try {
+                        const raw = localStorage.getItem('disabledStickerItems');
+                        if (raw) disabledStickerItems = new Set(JSON.parse(raw));
+                    } catch(e) {}
+                    const pool = (stickerLibrary || []).filter(s => !disabledStickerItems.has(s));
+                    if (pool.length > 0) {
+                        const name = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
+                        const delayMin = (typeof settings !== 'undefined' && settings.replyDelayMin) || 1500;
+                        const delayMax = (typeof settings !== 'undefined' && settings.replyDelayMax) || 4000;
+                        const delay = delayMin + Math.random() * (delayMax - delayMin);
+                        const pickedSticker = pool[Math.floor(Math.random() * pool.length)];
+
+                        setTimeout(() => {
+                            yyHideTyping();
+                            if (typeof addMessage === 'function') {
+                                addMessage({
+                                    id: Date.now() + 8888,
+                                    sender: name,
+                                    text: '',
+                                    timestamp: new Date(),
+                                    image: pickedSticker,
+                                    status: 'received',
+                                    favorited: false,
+                                    note: null,
+                                    type: 'normal'
+                                });
+                                if (typeof playSound === 'function') playSound('message');
+                            }
+                        }, delay);
+                        return; // 不走正常回复
+                    }
+                }
+            }
+
             orig();
             // emoji蹦出
             if (Math.random() < EMOJI_CHANCE) {
