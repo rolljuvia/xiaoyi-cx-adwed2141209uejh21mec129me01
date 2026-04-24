@@ -37,10 +37,17 @@
 
             // 加载分组到原版 customReplyGroups
             if (remoteCards.chat_groups) {
+                // 保留已有的 mute 状态
+                const existingGroups = window.customReplyGroups || [];
+                const disabledMap = {};
+                existingGroups.forEach(g => { disabledMap[g.name] = !!g.disabled; });
+
                 const groups = [];
                 const allGroupItems = [];
                 for (const [groupName, items] of Object.entries(remoteCards.chat_groups)) {
-                    groups.push({ name: groupName, items: items, disabled: false });
+                    // 如果之前 mute 过这个组，保留 mute 状态
+                    const wasDisabled = disabledMap.hasOwnProperty(groupName) ? disabledMap[groupName] : false;
+                    groups.push({ name: groupName, items: items, disabled: wasDisabled });
                     allGroupItems.push(...items);
                 }
                 window.customReplyGroups = groups;
