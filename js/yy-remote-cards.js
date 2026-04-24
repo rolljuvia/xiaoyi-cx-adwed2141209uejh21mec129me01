@@ -329,32 +329,69 @@
             if (textarea) {
                 inputArea.insertBefore(btn, textarea);
             }
+
+            // 监听发送：拦截 send 按钮和回车
+            const sendBtn = document.getElementById('send-btn');
+            if (sendBtn) {
+                sendBtn.addEventListener('click', handleYesNo, true);
+            }
+            if (textarea) {
+                textarea.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey && yyYesNoMode) {
+                        handleYesNo(e);
+                    }
+                }, true);
+            }
         }, 500);
     }
 
-    function sendYesNoReply() {
+    function handleYesNo(e) {
+        if (!yyYesNoMode) return; // 非YES/NO模式，不拦截
+
+        const textarea = document.getElementById('message-input');
+        const text = textarea ? textarea.value.trim() : '';
+        if (!text) return; // 没输入内容就不管
+
+        e.stopImmediatePropagation();
+        e.preventDefault();
+
+        // 先把用户消息发出去
         const name = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
-        const reply = YY_YESNO_REPLIES[Math.floor(Math.random() * YY_YESNO_REPLIES.length)];
-
-        // 隐藏"正在输入"
-        const tiW = document.getElementById('typing-indicator-wrapper');
-        if (tiW) tiW.style.display = 'none';
-
         if (typeof addMessage === 'function') {
             addMessage({
-                id: Date.now() + 9999,
-                sender: name,
-                text: reply,
+                id: Date.now(),
+                sender: 'user',
+                text: text,
                 timestamp: new Date(),
-                status: 'received',
+                status: 'sent',
                 favorited: false,
                 note: null,
                 type: 'normal'
             });
-            if (typeof playSound === 'function') playSound('message');
+            if (typeof playSound === 'function') playSound('send');
         }
+        textarea.value = '';
+        textarea.style.height = '46px';
 
-        // 关闭 YES/NO 模式
+        // 延迟一下，直接回复YES/NO
+        const reply = YY_YESNO_REPLIES[Math.floor(Math.random() * YY_YESNO_REPLIES.length)];
+        setTimeout(() => {
+            if (typeof addMessage === 'function') {
+                addMessage({
+                    id: Date.now() + 9999,
+                    sender: name,
+                    text: reply,
+                    timestamp: new Date(),
+                    status: 'received',
+                    favorited: false,
+                    note: null,
+                    type: 'normal'
+                });
+                if (typeof playSound === 'function') playSound('message');
+            }
+        }, 500 + Math.random() * 1000);
+
+        // 关闭模式
         yyYesNoMode = false;
         const btn = document.getElementById('yy-yesno-btn');
         if (btn) {
@@ -364,23 +401,13 @@
         }
     }
 
+
     // ========== 覆写 simulateReply 加emoji蹦出 ==========
     function enhanceSimulateReply() {
         const orig = window.simulateReply;
         if (!orig) return;
 
         window.simulateReply = function() {
-            // YES/NO模式：不走正常回复，直接文字回复
-            if (yyYesNoMode) {
-                // 隐藏"正在输入"
-                const tiW = document.getElementById('typing-indicator-wrapper');
-                if (tiW) tiW.style.display = 'none';
-                setTimeout(() => {
-                    sendYesNoReply();
-                }, 800 + Math.random() * 1500);
-                return;
-            }
-
             orig();
             // emoji蹦出
             if (Math.random() < EMOJI_CHANCE) {
