@@ -288,7 +288,7 @@
     function initYesNoButton() {
         // 等输入框加载
         const waitInput = setInterval(() => {
-            const inputArea = document.querySelector('.message-input-area') || document.querySelector('.input-area');
+            const inputArea = document.querySelector('.input-area');
             if (!inputArea) return;
             clearInterval(waitInput);
 
@@ -299,7 +299,8 @@
             btn.id = 'yy-yesno-btn';
             btn.textContent = '?';
             btn.title = 'YES/NO 模式';
-            btn.style.cssText = 'width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border-color,#ddd);background:transparent;color:var(--text-secondary,#999);font-size:16px;font-weight:700;cursor:pointer;flex-shrink:0;transition:all 0.3s;margin-right:4px;';
+            btn.className = 'input-btn collapse-hideable';
+            btn.style.cssText = 'width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border-color,#ddd);background:transparent;color:var(--text-secondary,#999);font-size:16px;font-weight:700;cursor:pointer;flex-shrink:0;transition:all 0.3s;';
             btn.addEventListener('click', function() {
                 yyYesNoMode = !yyYesNoMode;
                 if (yyYesNoMode) {
@@ -313,12 +314,10 @@
                 }
             });
 
-            // 插入到输入框前面
-            const sendBtn = inputArea.querySelector('button[onclick*="send"], .send-btn, #send-btn') || inputArea.lastElementChild;
-            if (sendBtn) {
-                inputArea.insertBefore(btn, sendBtn);
-            } else {
-                inputArea.prepend(btn);
+            // 插入到 textarea 前面
+            const textarea = document.getElementById('message-input');
+            if (textarea) {
+                inputArea.insertBefore(btn, textarea);
             }
         }, 500);
     }
@@ -597,31 +596,9 @@
 
     // ========== 主动消息间隔设置 ==========
     function initAutoSendSettings() {
-        // 在设置页面找到回信延迟设置，在后面插入主动消息设置
-        const replyDelayMin = document.getElementById('yy-reply-delay-min');
-        if (!replyDelayMin) return;
-
-        // 找到回信延迟的容器
-        const replyContainer = replyDelayMin.closest('.yy-delay-setting') || replyDelayMin.parentElement.parentElement;
-        if (!replyContainer || document.getElementById('yy-autosend-min')) return;
-
-        const autoSendDiv = document.createElement('div');
-        autoSendDiv.className = 'yy-delay-setting';
-        autoSendDiv.style.cssText = 'margin-top:12px;padding:12px;background:var(--primary-bg,#f5f5f5);border-radius:12px;';
-        autoSendDiv.innerHTML = `
-            <div style="font-size:12px;color:var(--text-secondary,#999);margin-bottom:8px;">✦ 主动消息间隔（分钟）</div>
-            <div style="display:flex;align-items:center;gap:8px;">
-                <input type="number" id="yy-autosend-min" min="1" style="width:60px;padding:6px 8px;border:1px solid var(--border-color,#ddd);border-radius:8px;background:var(--secondary-bg,#fff);color:var(--text-primary,#333);font-size:13px;text-align:center;" />
-                <span style="color:var(--text-secondary,#999);font-size:12px;">~</span>
-                <input type="number" id="yy-autosend-max" min="1" style="width:60px;padding:6px 8px;border:1px solid var(--border-color,#ddd);border-radius:8px;background:var(--secondary-bg,#fff);color:var(--text-primary,#333);font-size:13px;text-align:center;" />
-                <span style="color:var(--text-secondary,#999);font-size:12px;">分钟</span>
-            </div>
-        `;
-
-        replyContainer.parentElement.insertBefore(autoSendDiv, replyContainer.nextSibling);
-
         const autoMin = document.getElementById('yy-autosend-min');
         const autoMax = document.getElementById('yy-autosend-max');
+        if (!autoMin || !autoMax) return;
 
         autoMin.value = localStorage.getItem('yy_autosend_min_minutes') || '5';
         autoMax.value = localStorage.getItem('yy_autosend_max_minutes') || '120';
