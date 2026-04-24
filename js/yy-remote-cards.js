@@ -282,12 +282,125 @@
         };
     }
 
+    // ========== YES/NO 翻牌功能 ==========
+    let yyYesNoMode = false;
+
+    function initYesNoButton() {
+        // 等输入框加载
+        const waitInput = setInterval(() => {
+            const inputArea = document.querySelector('.message-input-area') || document.querySelector('.input-area');
+            if (!inputArea) return;
+            clearInterval(waitInput);
+
+            // 避免重复
+            if (document.getElementById('yy-yesno-btn')) return;
+
+            const btn = document.createElement('button');
+            btn.id = 'yy-yesno-btn';
+            btn.textContent = '?';
+            btn.title = 'YES/NO 模式';
+            btn.style.cssText = 'width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border-color,#ddd);background:transparent;color:var(--text-secondary,#999);font-size:16px;font-weight:700;cursor:pointer;flex-shrink:0;transition:all 0.3s;margin-right:4px;';
+            btn.addEventListener('click', function() {
+                yyYesNoMode = !yyYesNoMode;
+                if (yyYesNoMode) {
+                    btn.style.background = 'var(--accent-color,#c5a47e)';
+                    btn.style.color = '#fff';
+                    btn.style.borderColor = 'var(--accent-color,#c5a47e)';
+                } else {
+                    btn.style.background = 'transparent';
+                    btn.style.color = 'var(--text-secondary,#999)';
+                    btn.style.borderColor = 'var(--border-color,#ddd)';
+                }
+            });
+
+            // 插入到输入框前面
+            const sendBtn = inputArea.querySelector('button[onclick*="send"], .send-btn, #send-btn') || inputArea.lastElementChild;
+            if (sendBtn) {
+                inputArea.insertBefore(btn, sendBtn);
+            } else {
+                inputArea.prepend(btn);
+            }
+        }, 500);
+    }
+
+    function injectYesNoCard() {
+        const answer = Math.random() < 0.5 ? 'YES' : 'NO';
+        const cardId = 'yy-yesno-' + Date.now();
+
+        // 作为对方的消息插入
+        const name = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
+        if (typeof addMessage === 'function') {
+            addMessage({
+                id: Date.now() + 9999,
+                sender: name,
+                text: '___YESNO_CARD___' + cardId + '___' + answer,
+                timestamp: new Date(),
+                status: 'received',
+                favorited: false,
+                note: null,
+                type: 'normal'
+            });
+            if (typeof playSound === 'function') playSound('message');
+        }
+
+        // 替换消息文本为翻牌卡片
+        setTimeout(() => {
+            const allMsgs = document.querySelectorAll('.message-bubble, .msg-text, .message-text');
+            allMsgs.forEach(el => {
+                if (el.textContent.includes('___YESNO_CARD___' + cardId)) {
+                    el.innerHTML = '';
+                    el.style.background = 'transparent';
+                    el.style.border = 'none';
+                    el.style.boxShadow = 'none';
+                    el.style.padding = '0';
+
+                    const card = document.createElement('div');
+                    card.className = 'yy-yesno-card';
+                    card.innerHTML = `
+                        <div class="yy-yesno-inner">
+                            <div class="yy-yesno-back">
+                                <span class="yy-yesno-symbol">✦</span>
+                                <span class="yy-yesno-hint">点击揭示</span>
+                            </div>
+                            <div class="yy-yesno-front yy-yesno-${answer.toLowerCase()}">
+                                <span class="yy-yesno-answer">${answer}</span>
+                            </div>
+                        </div>
+                    `;
+                    card.addEventListener('click', function() {
+                        if (!card.classList.contains('flipped')) {
+                            card.classList.add('flipped');
+                        }
+                    });
+                    el.appendChild(card);
+                }
+            });
+        }, 300);
+
+        // 用完自动关闭 YES/NO 模式
+        yyYesNoMode = false;
+        const btn = document.getElementById('yy-yesno-btn');
+        if (btn) {
+            btn.style.background = 'transparent';
+            btn.style.color = 'var(--text-secondary,#999)';
+            btn.style.borderColor = 'var(--border-color,#ddd)';
+        }
+    }
+
     // ========== 覆写 simulateReply 加emoji蹦出 ==========
     function enhanceSimulateReply() {
         const orig = window.simulateReply;
         if (!orig) return;
 
         window.simulateReply = function() {
+            // YES/NO模式：不走正常回复，直接翻牌
+            if (yyYesNoMode) {
+                setTimeout(() => {
+                    injectYesNoCard();
+                }, 1000 + Math.random() * 2000);
+                return;
+            }
+
             orig();
             // emoji蹦出
             if (Math.random() < EMOJI_CHANCE) {
@@ -395,6 +508,44 @@
                 cursor:pointer; letter-spacing:2px; transition:all 0.3s;
             }
             .yy-flip-done-btn:active { background:rgba(197,164,126,0.15); }
+            /* YES/NO 翻牌样式 */
+            .yy-yesno-card {
+                width:120px; height:60px; perspective:600px; cursor:pointer;
+                margin:4px 0;
+            }
+            .yy-yesno-inner {
+                position:relative; width:100%; height:100%;
+                transition: transform 0.5s cubic-bezier(0.25,0.8,0.25,1);
+                transform-style: preserve-3d;
+            }
+            .yy-yesno-card.flipped .yy-yesno-inner { transform: rotateY(180deg); }
+            .yy-yesno-back, .yy-yesno-front {
+                position:absolute; inset:0; backface-visibility:hidden;
+                border-radius:10px; display:flex; flex-direction:column;
+                align-items:center; justify-content:center;
+            }
+            .yy-yesno-back {
+                background:linear-gradient(145deg, #1a1a2e, #16213e);
+                border:1px solid rgba(255,255,255,0.1);
+            }
+            .yy-yesno-symbol { font-size:18px; color:rgba(197,164,126,0.6); }
+            .yy-yesno-hint { font-size:9px; color:#555; margin-top:2px; animation: yyPulse 2s ease-in-out infinite; }
+            .yy-yesno-front {
+                transform: rotateY(180deg);
+                border:1px solid rgba(197,164,126,0.3);
+            }
+            .yy-yesno-front.yy-yesno-yes {
+                background:linear-gradient(145deg, #1a2e1a, #1e3a1e);
+            }
+            .yy-yesno-front.yy-yesno-no {
+                background:linear-gradient(145deg, #2e1a1a, #3a1e1e);
+            }
+            .yy-yesno-answer {
+                font-size:22px; font-weight:700; letter-spacing:4px;
+                font-family:'Noto Serif SC',serif;
+            }
+            .yy-yesno-yes .yy-yesno-answer { color:#6abf69; }
+            .yy-yesno-no .yy-yesno-answer { color:#cf6b6b; }
         `;
         document.head.appendChild(style);
     }
@@ -414,6 +565,7 @@
                 clearInterval(wait);
                 enhanceSimulateReply();
                 initReplyDelaySettings();
+                initYesNoButton();
                 console.log('[RemoteCards] 初始化完成');
             }
         }, 500);
