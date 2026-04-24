@@ -68,21 +68,33 @@
             if (remoteCards.oracle_motto) window._remoteMottos = remoteCards.oracle_motto;
 
             // 拍一拍
-            if (remoteCards.pokes && typeof customPokes !== 'undefined') {
-                customPokes.length = 0;
-                customPokes.push(...remoteCards.pokes);
+            if (remoteCards.pokes) {
+                if (typeof customPokes !== 'undefined') {
+                    customPokes.length = 0;
+                    customPokes.push(...remoteCards.pokes);
+                } else {
+                    window.customPokes = [...remoteCards.pokes];
+                }
             }
 
             // 状态（公告页用）
-            if (remoteCards.statuses && typeof customStatuses !== 'undefined') {
-                customStatuses.length = 0;
-                customStatuses.push(...remoteCards.statuses);
+            if (remoteCards.statuses) {
+                if (typeof customStatuses !== 'undefined') {
+                    customStatuses.length = 0;
+                    customStatuses.push(...remoteCards.statuses);
+                } else {
+                    window.customStatuses = [...remoteCards.statuses];
+                }
             }
 
             // 每日寄语（从神谕池）
-            if (remoteCards.oracle_motto && typeof customMottos !== 'undefined') {
-                customMottos.length = 0;
-                customMottos.push(...remoteCards.oracle_motto);
+            if (remoteCards.oracle_motto) {
+                if (typeof customMottos !== 'undefined') {
+                    customMottos.length = 0;
+                    customMottos.push(...remoteCards.oracle_motto);
+                } else {
+                    window.customMottos = [...remoteCards.oracle_motto];
+                }
             }
 
             console.log('[RemoteCards] 加载成功');
