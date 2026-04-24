@@ -361,17 +361,6 @@
     }
 
 
-    // ========== 角色链接占位按钮 ==========
-    function initRoleLinkButton() {
-        const btn = document.getElementById('yy-role-link-btn');
-        if (!btn) return;
-        btn.addEventListener('click', function() {
-            if (typeof showNotification === 'function') {
-                showNotification('✦ 角色链接功能开发中 ✦', 'info', 2000);
-            }
-        });
-    }
-
 
     // ========== 覆写 simulateReply 加emoji蹦出 ==========
     function enhanceSimulateReply() {
@@ -619,7 +608,6 @@
                 initReplyDelaySettings();
                 initAutoSendSettings();
                 initYesNoButton();
-                initRoleLinkButton();
                 console.log('[RemoteCards] 初始化完成');
             }
         }, 500);
