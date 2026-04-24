@@ -460,11 +460,7 @@
                 }
             }
 
-            // 临时禁用原版表情包回复（只有用户发表情包时才回表情包）
-            const origStickerLib = window.stickerLibrary;
-            if (typeof stickerLibrary !== 'undefined') window.stickerLibrary = [];
             orig();
-            if (typeof stickerLibrary !== 'undefined') window.stickerLibrary = origStickerLib;
             // emoji蹦出
             if (Math.random() < EMOJI_CHANCE) {
                 const name = (typeof settings !== 'undefined' && settings.partnerName) || '对方';

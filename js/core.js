@@ -1706,7 +1706,7 @@ if (partnerPersonas && partnerPersonas.length > 0 && Math.random() < 0.3) {
                         if (raw) disabledStickerItems = new Set(JSON.parse(raw));
                     } catch (e) {}
                     const enabledStickerPool = (stickerLibrary || []).filter(s => !disabledStickerItems.has(s));
-                    const shouldSendSticker = enabledStickerPool.length > 0 && Math.random() < 0.2;
+                    const shouldSendSticker = false; // 表情包回复由 yy-remote-cards.js 控制
 
                     let finalText = replyText;
                     let separateEmoji = null;
