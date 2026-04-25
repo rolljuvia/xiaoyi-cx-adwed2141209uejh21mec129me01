@@ -665,7 +665,7 @@
 
     // ========== 用户点赞 emoji 选择器 ==========
     function initUserReactionPicker() {
-        const REACTION_EMOJIS = ['❤️','🔮','✨','💫','🌙','😊','🥺','😘','🤗','💕','🫶','🌸','🧸','👏','😭'];
+        const REACTION_EMOJIS = ['❤️','🔮','✨','😭','😴','😊','🥺','😘','🤗','😉','🫶','👏','💌','🧸','❓'];
 
         document.addEventListener('click', function(e) {
             const btn = e.target.closest('.yy-react-btn');
