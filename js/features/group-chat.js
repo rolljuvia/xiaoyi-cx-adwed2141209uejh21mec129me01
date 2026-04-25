@@ -1,3 +1,5 @@
+var _gcStorageKey = (window.location.pathname.split('/')[1] || 'default') + '_groupChatSettings';
+
 window.switchStatsTab = function(tab) {
     var statsPanel = document.getElementById('stats-panel');
     var favoritesPanel = document.getElementById('favorites-panel');
@@ -34,8 +36,6 @@ window.switchStatsTab = function(tab) {
 
 var groupChatSettings = (function() {
     try {
-        var _gcProjectPath = window.location.pathname.split('/')[1] || 'default';
-        var _gcStorageKey = _gcProjectPath + '_groupChatSettings';
         var saved = JSON.parse(localStorage.getItem(_gcStorageKey) || 'null');
         if (!saved) return { enabled: false, showAvatar: true, showName: true, members: [] };
         if (!saved.members) saved.members = [];
