@@ -386,15 +386,17 @@
                 }
 
                 const name = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
-                // 概率：YES 40%, NO 40%, SIGNAL LOST 20%
+                // 概率：YES 35%, NO 35%, UNSURE 15%, SIGNAL LOST 15%
                 const roll = Math.random();
                 let reply;
-                if (roll < 0.4) {
-                    reply = '✦ 𝒀𝑬𝑺 ✦';
-                } else if (roll < 0.8) {
-                    reply = '✧ 𝑵𝑶 ✧';
+                if (roll < 0.35) {
+                    reply = '✦˖°·̩̩̥ 𝒴𝐸𝒮 ·̩̩̥°˖✦';
+                } else if (roll < 0.70) {
+                    reply = '✦˖°·̩̩̥ 𝒩𝒪 ·̩̩̥°˖✦';
+                } else if (roll < 0.85) {
+                    reply = '⸸·̩̩̥ ᴜɴsᴜʀᴇ ·̩̩̥⸸';
                 } else {
-                    reply = '░▒▓ 𝑺𝑰𝑮𝑵𝑨𝑳 𝑳𝑶𝑺𝑻 ▓▒░';
+                    reply = '.̶.̶.̶s̷i̷g̷n̷a̷l̷ ̷l̷o̷s̷t̷.̶.̶.̶';
                 }
 
                 // 用原版的延迟范围
@@ -437,7 +439,7 @@
                 if (!members || members.length === 0) return;
 
                 const chance = isLink ? (0.5 + Math.random() * 0.2) : (0.1 + Math.random() * 0.1);
-                const emoji = isLink ? '🔮' : '❤️';
+                const dailyEmojiPool = window._remoteEmojis || ['❤️','😊','✨','💕','🥺','🤗','❓','👏'];
                 const reactors = members.filter(() => Math.random() < chance);
                 if (reactors.length === 0) return;
 
@@ -448,6 +450,7 @@
                     setTimeout(() => {
                         const already = targetMsg.reactions.find(r => r.name === m.name);
                         if (already) return;
+                        const emoji = isLink ? '🔮' : dailyEmojiPool[Math.floor(Math.random() * dailyEmojiPool.length)];
                         targetMsg.reactions.push({ name: m.name, avatar: m.avatar || null, emoji: emoji });
 
                         // 更新 DOM
@@ -660,12 +663,124 @@
         document.head.appendChild(style);
     }
 
+    // ========== 用户点赞 emoji 选择器 ==========
+    function initUserReactionPicker() {
+        const REACTION_EMOJIS = ['❤️','🔮','✨','💫','🌙','😊','🥺','😘','🤗','💕','🫶','🌸','🧸','👏','😭'];
+
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.yy-react-btn');
+            if (!btn) return;
+            e.stopPropagation();
+
+            // 关闭已有的 picker
+            document.querySelectorAll('.yy-reaction-picker').forEach(el => el.remove());
+
+            const wrapper = btn.closest('.message-wrapper');
+            if (!wrapper) return;
+            const msgId = wrapper.dataset.msgId || wrapper.dataset.id;
+            if (!msgId) return;
+
+            const picker = document.createElement('div');
+            picker.className = 'yy-reaction-picker';
+            picker.style.cssText = 'position:absolute;bottom:100%;' + (wrapper.classList.contains('sent') ? 'right:0;' : 'left:0;') + 'margin-bottom:6px;background:var(--secondary-bg);border:1px solid var(--border-color);border-radius:16px;padding:6px 8px;display:flex;gap:4px;flex-wrap:wrap;max-width:220px;box-shadow:0 4px 16px rgba(0,0,0,0.15);z-index:999;animation:fadeIn 0.15s ease;';
+
+            REACTION_EMOJIS.forEach(function(emoji) {
+                const item = document.createElement('span');
+                item.textContent = emoji;
+                item.style.cssText = 'font-size:20px;cursor:pointer;padding:2px 4px;border-radius:8px;transition:background 0.15s;';
+                item.addEventListener('mouseenter', function() { item.style.background = 'rgba(var(--accent-color-rgb,180,140,100),0.15)'; });
+                item.addEventListener('mouseleave', function() { item.style.background = 'none'; });
+                item.addEventListener('click', function(ev) {
+                    ev.stopPropagation();
+                    picker.remove();
+
+                    // 找到消息对象
+                    const msg = (typeof messages !== 'undefined') ? messages.find(function(m) { return String(m.id) === String(msgId); }) : null;
+                    if (!msg) return;
+
+                    msg.reactions = msg.reactions || [];
+                    const myName = (typeof settings !== 'undefined' && settings.myName) || '我';
+                    // 已有同 emoji 则取消，不同则替换
+                    const existing = msg.reactions.findIndex(function(r) { return r.name === myName; });
+                    if (existing !== -1) {
+                        if (msg.reactions[existing].emoji === emoji) {
+                            msg.reactions.splice(existing, 1);
+                        } else {
+                            msg.reactions[existing].emoji = emoji;
+                        }
+                    } else {
+                        // 获取用户头像
+                        let myAvatar = null;
+                        const myAvatarEl = document.querySelector('#my-avatar img');
+                        if (myAvatarEl) myAvatar = myAvatarEl.src;
+                        msg.reactions.push({ name: myName, avatar: myAvatar, emoji: emoji });
+                    }
+
+                    // 重新渲染该消息的 reactions 行
+                    yyRerenderReactions(wrapper, msg);
+                    if (typeof throttledSaveData === 'function') throttledSaveData();
+                });
+                picker.appendChild(item);
+            });
+
+            // 定位：挂在 actions div 上
+            const actionsDiv = btn.closest('.message-meta-actions');
+            if (actionsDiv) {
+                actionsDiv.style.position = 'relative';
+                actionsDiv.appendChild(picker);
+            }
+
+            // 点击外部关闭
+            setTimeout(function() {
+                document.addEventListener('click', function closePicker(ev) {
+                    if (!picker.contains(ev.target)) {
+                        picker.remove();
+                        document.removeEventListener('click', closePicker);
+                    }
+                });
+            }, 50);
+        });
+    }
+
+    // 重新渲染单条消息的 reactions 行
+    function yyRerenderReactions(wrapper, msg) {
+        let row = wrapper.querySelector('.yy-reactions-row');
+        if (msg.reactions && msg.reactions.length > 0) {
+            if (!row) {
+                row = document.createElement('div');
+                row.className = 'yy-reactions-row';
+                const isSent = wrapper.classList.contains('sent');
+                row.style.cssText = 'display:flex;align-items:center;gap:2px;margin-top:2px;flex-wrap:wrap;' + (isSent ? 'justify-content:flex-end;' : 'justify-content:flex-start;padding-left:4px;');
+                const cw = wrapper.querySelector('.message-content-wrapper');
+                if (cw) cw.appendChild(row);
+            }
+            row.innerHTML = '';
+            msg.reactions.forEach(function(r) {
+                const chip = document.createElement('div');
+                chip.className = 'yy-reaction-chip';
+                chip.title = r.name;
+                chip.style.cssText = 'display:flex;align-items:center;gap:2px;padding:2px 6px;border-radius:12px;background:rgba(var(--accent-color-rgb,180,140,100),0.12);font-size:11px;cursor:default;';
+                const emoji = r.emoji || '❤️';
+                if (r.avatar) {
+                    chip.innerHTML = '<img src="' + r.avatar + '" style="width:16px;height:16px;border-radius:50%;object-fit:cover;"><span>' + emoji + '</span>';
+                } else {
+                    const initial = (r.name || '?').charAt(0);
+                    chip.innerHTML = '<span style="width:16px;height:16px;border-radius:50%;background:var(--accent-color);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;">' + initial + '</span><span>' + emoji + '</span>';
+                }
+                row.appendChild(chip);
+            });
+        } else if (row) {
+            row.remove();
+        }
+    }
+
     // ========== 初始化 ==========
     async function init() {
         injectStyles();
         await loadRemoteCards();
         updateDailyMood();
         injectDailyStatus();
+        initUserReactionPicker();
 
         // 立刻覆写回信生成（不等simulateReply）
         overrideEnvelopeReply();
