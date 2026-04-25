@@ -37,6 +37,14 @@ window.switchStatsTab = function(tab) {
 var groupChatSettings = (function() {
     try {
         var saved = JSON.parse(localStorage.getItem(_gcStorageKey) || 'null');
+        // 迁移：旧 key 有数据但新 key 没有，自动迁移
+        if (!saved) {
+            var oldSaved = JSON.parse(localStorage.getItem('groupChatSettings') || 'null');
+            if (oldSaved) {
+                saved = oldSaved;
+                localStorage.setItem(_gcStorageKey, JSON.stringify(saved));
+            }
+        }
         if (!saved) return { enabled: false, showAvatar: true, showName: true, members: [] };
         if (!saved.members) saved.members = [];
         return saved;
