@@ -34,7 +34,9 @@ window.switchStatsTab = function(tab) {
 
 var groupChatSettings = (function() {
     try {
-        var saved = JSON.parse(localStorage.getItem('groupChatSettings') || 'null');
+        var _gcProjectPath = window.location.pathname.split('/')[1] || 'default';
+        var _gcStorageKey = _gcProjectPath + '_groupChatSettings';
+        var saved = JSON.parse(localStorage.getItem(_gcStorageKey) || 'null');
         if (!saved) return { enabled: false, showAvatar: true, showName: true, members: [] };
         if (!saved.members) saved.members = [];
         return saved;
@@ -68,7 +70,7 @@ function saveGroupChatSettings() {
         })
     };
     try {
-        localStorage.setItem('groupChatSettings', JSON.stringify(toSave));
+        localStorage.setItem(_gcStorageKey, JSON.stringify(toSave));
     } catch(e) {
         console.warn('groupChatSettings localStorage保存失败:', e);
     }
