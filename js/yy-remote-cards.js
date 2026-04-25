@@ -541,6 +541,44 @@
 
             orig();
 
+            // 单聊模式：对方回复文字后，概率给用户最近一条消息点赞
+            if (typeof groupChatSettings === 'undefined' || !groupChatSettings.enabled) {
+                if (typeof messages !== 'undefined' && messages.length > 0 && Math.random() < 0.15) {
+                    const userMsg = messages.filter(m => m.sender === 'user' && !m.image).pop();
+                    if (userMsg) {
+                        const emojiPool = window._remoteEmojis || ['❤️','😊','✨','💫','🌙','💕','🥺','🤗','🫶','👏'];
+                        const emoji = emojiPool[Math.floor(Math.random() * emojiPool.length)];
+                        const name = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
+                        const delay = 2000 + Math.random() * 3000;
+                        setTimeout(() => {
+                            userMsg.reactions = userMsg.reactions || [];
+                            if (userMsg.reactions.find(r => r.name === name)) return;
+                            userMsg.reactions.push({ name: name, avatar: null, emoji: emoji });
+                            const wrapper = document.querySelector('[data-msg-id="' + userMsg.id + '"]') || document.querySelector('[data-id="' + userMsg.id + '"]');
+                            if (wrapper) {
+                                let row = wrapper.querySelector('.yy-reactions-row');
+                                if (!row) {
+                                    row = document.createElement('div');
+                                    row.className = 'yy-reactions-row';
+                                    row.style.cssText = 'display:flex;align-items:center;gap:2px;margin-top:2px;flex-wrap:wrap;justify-content:flex-end;';
+                                    const cw = wrapper.querySelector('.message-content-wrapper');
+                                    if (cw) cw.appendChild(row);
+                                }
+                                const chip = document.createElement('div');
+                                chip.className = 'yy-reaction-chip';
+                                chip.title = name;
+                                chip.style.cssText = 'display:flex;align-items:center;gap:2px;padding:2px 6px;border-radius:12px;background:rgba(var(--accent-color-rgb,180,140,100),0.12);font-size:11px;cursor:default;opacity:0;transition:opacity 0.3s;';
+                                const initial = (name || '?').charAt(0);
+                                chip.innerHTML = '<span style="width:16px;height:16px;border-radius:50%;background:var(--accent-color);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;">' + initial + '</span><span>' + emoji + '</span>';
+                                row.appendChild(chip);
+                                requestAnimationFrame(() => { chip.style.opacity = '1'; });
+                            }
+                            if (typeof throttledSaveData === 'function') throttledSaveData();
+                        }, delay);
+                    }
+                }
+            }
+
             // 群聊日常点赞（❤️）：文字消息也有概率被点赞
             if (typeof groupChatSettings !== 'undefined' && groupChatSettings.enabled && groupChatSettings.members && groupChatSettings.members.length > 0) {
                 if (typeof messages !== 'undefined' && messages.length > 0) {
