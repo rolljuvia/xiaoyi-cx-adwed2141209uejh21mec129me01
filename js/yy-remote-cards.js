@@ -394,7 +394,7 @@
                 } else if (roll < 0.8) {
                     reply = '✧ 𝑵𝑶 ✧';
                 } else {
-                    reply = '.̶.̶.̶s̷i̷g̷n̷a̷l̷ ̷l̷o̷s̷t̷.̶.̶.̶';
+                    reply = '░▒▓ 𝑺𝑰𝑮𝑵𝑨𝑳 𝑳𝑶𝑺𝑻 ▓▒░';
                 }
 
                 // 用原版的延迟范围
@@ -430,6 +430,31 @@
                 return;
             }
 
+            // ========== 点赞 chip 渲染（共用） ==========
+            function yyRenderReactionChip(wrapper, name, avatar, emoji) {
+                let row = wrapper.querySelector('.yy-reactions-row');
+                if (!row) {
+                    row = document.createElement('div');
+                    row.className = 'yy-reactions-row';
+                    const isSent = wrapper.classList.contains('sent');
+                    row.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:3px;flex-wrap:wrap;' + (isSent ? 'justify-content:flex-end;' : 'justify-content:flex-start;padding-left:4px;');
+                    const cw = wrapper.querySelector('.message-content-wrapper');
+                    if (cw) cw.appendChild(row);
+                }
+                const chip = document.createElement('div');
+                chip.className = 'yy-reaction-chip';
+                chip.title = name;
+                chip.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:14px;background:rgba(var(--accent-color-rgb,180,140,100),0.15);font-size:14px;cursor:default;opacity:0;transition:opacity 0.3s;';
+                if (avatar) {
+                    chip.innerHTML = '<img src="' + avatar + '" style="width:22px;height:22px;border-radius:50%;object-fit:cover;"><span>' + emoji + '</span>';
+                } else {
+                    const initial = (name || '?').charAt(0);
+                    chip.innerHTML = '<span style="width:22px;height:22px;border-radius:50%;background:var(--accent-color);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;">' + initial + '</span><span>' + emoji + '</span>';
+                }
+                row.appendChild(chip);
+                requestAnimationFrame(() => { chip.style.opacity = '1'; });
+            }
+
             // ========== 群聊点赞 helper ==========
             function yyTriggerGroupReactions(targetMsg, isLink) {
                 if (typeof groupChatSettings === 'undefined' || !groupChatSettings.enabled) return;
@@ -453,28 +478,7 @@
 
                         // 更新 DOM
                         const wrapper = document.querySelector('[data-msg-id="' + targetMsg.id + '"]') || document.querySelector('[data-id="' + targetMsg.id + '"]');
-                        if (wrapper) {
-                            let row = wrapper.querySelector('.yy-reactions-row');
-                            if (!row) {
-                                row = document.createElement('div');
-                                row.className = 'yy-reactions-row';
-                                row.style.cssText = 'display:flex;align-items:center;gap:2px;margin-top:2px;flex-wrap:wrap;justify-content:flex-end;';
-                                const cw = wrapper.querySelector('.message-content-wrapper');
-                                if (cw) cw.appendChild(row);
-                            }
-                            const chip = document.createElement('div');
-                            chip.className = 'yy-reaction-chip';
-                            chip.title = m.name;
-                            chip.style.cssText = 'display:flex;align-items:center;gap:2px;padding:2px 6px;border-radius:12px;background:rgba(var(--accent-color-rgb,180,140,100),0.12);font-size:11px;cursor:default;opacity:0;transition:opacity 0.3s;';
-                            if (m.avatar) {
-                                chip.innerHTML = '<img src="' + m.avatar + '" style="width:16px;height:16px;border-radius:50%;object-fit:cover;"><span>' + emoji + '</span>';
-                            } else {
-                                const initial = (m.name || '?').charAt(0);
-                                chip.innerHTML = '<span style="width:16px;height:16px;border-radius:50%;background:var(--accent-color);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;">' + initial + '</span><span>' + emoji + '</span>';
-                            }
-                            row.appendChild(chip);
-                            requestAnimationFrame(() => { chip.style.opacity = '1'; });
-                        }
+                        if (wrapper) yyRenderReactionChip(wrapper, m.name, m.avatar, emoji);
                         if (typeof throttledSaveData === 'function') throttledSaveData();
                     }, delay);
                 });
@@ -549,30 +553,26 @@
                         const emojiPool = window._remoteEmojis || ['❤️','😊','✨','💫','🌙','💕','🥺','🤗','🫶','👏'];
                         const emoji = emojiPool[Math.floor(Math.random() * emojiPool.length)];
                         const name = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
+                        // 获取对方头像
+                        let partnerAvatarSrc = null;
+                        try {
+                            const pImg = document.querySelector('#partner-avatar img');
+                            if (pImg && pImg.src) partnerAvatarSrc = pImg.src;
+                            if (!partnerAvatarSrc) {
+                                const bgEl = document.querySelector('#partner-avatar');
+                                if (bgEl && bgEl.style.backgroundImage) {
+                                    const match = bgEl.style.backgroundImage.match(/url\(["']?(.+?)["']?\)/);
+                                    if (match) partnerAvatarSrc = match[1];
+                                }
+                            }
+                        } catch(e) {}
                         const delay = 2000 + Math.random() * 3000;
                         setTimeout(() => {
                             userMsg.reactions = userMsg.reactions || [];
                             if (userMsg.reactions.find(r => r.name === name)) return;
-                            userMsg.reactions.push({ name: name, avatar: null, emoji: emoji });
+                            userMsg.reactions.push({ name: name, avatar: partnerAvatarSrc, emoji: emoji });
                             const wrapper = document.querySelector('[data-msg-id="' + userMsg.id + '"]') || document.querySelector('[data-id="' + userMsg.id + '"]');
-                            if (wrapper) {
-                                let row = wrapper.querySelector('.yy-reactions-row');
-                                if (!row) {
-                                    row = document.createElement('div');
-                                    row.className = 'yy-reactions-row';
-                                    row.style.cssText = 'display:flex;align-items:center;gap:2px;margin-top:2px;flex-wrap:wrap;justify-content:flex-end;';
-                                    const cw = wrapper.querySelector('.message-content-wrapper');
-                                    if (cw) cw.appendChild(row);
-                                }
-                                const chip = document.createElement('div');
-                                chip.className = 'yy-reaction-chip';
-                                chip.title = name;
-                                chip.style.cssText = 'display:flex;align-items:center;gap:2px;padding:2px 6px;border-radius:12px;background:rgba(var(--accent-color-rgb,180,140,100),0.12);font-size:11px;cursor:default;opacity:0;transition:opacity 0.3s;';
-                                const initial = (name || '?').charAt(0);
-                                chip.innerHTML = '<span style="width:16px;height:16px;border-radius:50%;background:var(--accent-color);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;">' + initial + '</span><span>' + emoji + '</span>';
-                                row.appendChild(chip);
-                                requestAnimationFrame(() => { chip.style.opacity = '1'; });
-                            }
+                            if (wrapper) yyRenderReactionChip(wrapper, name, partnerAvatarSrc, emoji);
                             if (typeof throttledSaveData === 'function') throttledSaveData();
                         }, delay);
                     }
@@ -786,7 +786,7 @@
                 row = document.createElement('div');
                 row.className = 'yy-reactions-row';
                 const isSent = wrapper.classList.contains('sent');
-                row.style.cssText = 'display:flex;align-items:center;gap:2px;margin-top:2px;flex-wrap:wrap;' + (isSent ? 'justify-content:flex-end;' : 'justify-content:flex-start;padding-left:4px;');
+                row.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:3px;flex-wrap:wrap;' + (isSent ? 'justify-content:flex-end;' : 'justify-content:flex-start;padding-left:4px;');
                 const cw = wrapper.querySelector('.message-content-wrapper');
                 if (cw) cw.appendChild(row);
             }
@@ -795,13 +795,13 @@
                 const chip = document.createElement('div');
                 chip.className = 'yy-reaction-chip';
                 chip.title = r.name;
-                chip.style.cssText = 'display:flex;align-items:center;gap:2px;padding:2px 6px;border-radius:12px;background:rgba(var(--accent-color-rgb,180,140,100),0.12);font-size:11px;cursor:default;';
+                chip.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:14px;background:rgba(var(--accent-color-rgb,180,140,100),0.15);font-size:14px;cursor:default;';
                 const emoji = r.emoji || '❤️';
                 if (r.avatar) {
-                    chip.innerHTML = '<img src="' + r.avatar + '" style="width:16px;height:16px;border-radius:50%;object-fit:cover;"><span>' + emoji + '</span>';
+                    chip.innerHTML = '<img src="' + r.avatar + '" style="width:22px;height:22px;border-radius:50%;object-fit:cover;"><span>' + emoji + '</span>';
                 } else {
                     const initial = (r.name || '?').charAt(0);
-                    chip.innerHTML = '<span style="width:16px;height:16px;border-radius:50%;background:var(--accent-color);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;">' + initial + '</span><span>' + emoji + '</span>';
+                    chip.innerHTML = '<span style="width:22px;height:22px;border-radius:50%;background:var(--accent-color);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;">' + initial + '</span><span>' + emoji + '</span>';
                 }
                 row.appendChild(chip);
             });

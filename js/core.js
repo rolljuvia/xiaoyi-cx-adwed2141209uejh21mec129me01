@@ -1145,18 +1145,18 @@ function createMessageFragment(msg, prevMsg, nextMsg, lastSenderRef) {
         const reactRow = document.createElement('div');
         reactRow.className = 'yy-reactions-row';
         const isSent = msg.sender === 'user';
-        reactRow.style.cssText = 'display:flex;align-items:center;gap:2px;margin-top:2px;flex-wrap:wrap;' + (isSent ? 'justify-content:flex-end;' : 'justify-content:flex-start;padding-left:4px;');
+        reactRow.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:3px;flex-wrap:wrap;' + (isSent ? 'justify-content:flex-end;' : 'justify-content:flex-start;padding-left:4px;');
         msg.reactions.forEach(function(r) {
             const chip = document.createElement('div');
             chip.className = 'yy-reaction-chip';
             chip.title = r.name;
-            chip.style.cssText = 'display:flex;align-items:center;gap:2px;padding:2px 6px;border-radius:12px;background:rgba(var(--accent-color-rgb,180,140,100),0.12);font-size:11px;cursor:default;';
+            chip.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:14px;background:rgba(var(--accent-color-rgb,180,140,100),0.15);font-size:14px;cursor:default;';
             const emoji = r.emoji || '❤️';
             if (r.avatar) {
-                chip.innerHTML = '<img src="' + r.avatar + '" style="width:16px;height:16px;border-radius:50%;object-fit:cover;">' + '<span>' + emoji + '</span>';
+                chip.innerHTML = '<img src="' + r.avatar + '" style="width:22px;height:22px;border-radius:50%;object-fit:cover;">' + '<span>' + emoji + '</span>';
             } else {
                 const initial = (r.name || '?').charAt(0);
-                chip.innerHTML = '<span style="width:16px;height:16px;border-radius:50%;background:var(--accent-color);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;">' + initial + '</span>' + '<span>' + emoji + '</span>';
+                chip.innerHTML = '<span style="width:22px;height:22px;border-radius:50%;background:var(--accent-color);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;">' + initial + '</span>' + '<span>' + emoji + '</span>';
             }
             reactRow.appendChild(chip);
         });
