@@ -8,6 +8,7 @@
 //  - 牌面保存在信件中
 //  - 每日寄语从神谕池抽一句
 //  - 每日心情/状态随机
+//  - 群聊点赞：日常❤️(10-20%) / 链接确认🔮(50-70%)
 // ============================================
 
 (function() {
@@ -429,11 +430,60 @@
                 return;
             }
 
-            // 表情包互动：用户发了表情包（有image无text），对方只回一张表情包
+            // ========== 群聊点赞 helper ==========
+            function yyTriggerGroupReactions(targetMsg, isLink) {
+                if (typeof groupChatSettings === 'undefined' || !groupChatSettings.enabled) return;
+                const members = groupChatSettings.members;
+                if (!members || members.length === 0) return;
+
+                const chance = isLink ? (0.5 + Math.random() * 0.2) : (0.1 + Math.random() * 0.1);
+                const emoji = isLink ? '🔮' : '❤️';
+                const reactors = members.filter(() => Math.random() < chance);
+                if (reactors.length === 0) return;
+
+                targetMsg.reactions = targetMsg.reactions || [];
+
+                reactors.forEach((m, i) => {
+                    const delay = 1000 + Math.random() * 4000 + i * 500;
+                    setTimeout(() => {
+                        const already = targetMsg.reactions.find(r => r.name === m.name);
+                        if (already) return;
+                        targetMsg.reactions.push({ name: m.name, avatar: m.avatar || null, emoji: emoji });
+
+                        // 更新 DOM
+                        const wrapper = document.querySelector('[data-msg-id="' + targetMsg.id + '"]') || document.querySelector('[data-id="' + targetMsg.id + '"]');
+                        if (wrapper) {
+                            let row = wrapper.querySelector('.yy-reactions-row');
+                            if (!row) {
+                                row = document.createElement('div');
+                                row.className = 'yy-reactions-row';
+                                row.style.cssText = 'display:flex;align-items:center;gap:2px;margin-top:2px;flex-wrap:wrap;justify-content:flex-end;';
+                                const cw = wrapper.querySelector('.message-content-wrapper');
+                                if (cw) cw.appendChild(row);
+                            }
+                            const chip = document.createElement('div');
+                            chip.className = 'yy-reaction-chip';
+                            chip.title = m.name;
+                            chip.style.cssText = 'display:flex;align-items:center;gap:2px;padding:2px 6px;border-radius:12px;background:rgba(var(--accent-color-rgb,180,140,100),0.12);font-size:11px;cursor:default;opacity:0;transition:opacity 0.3s;';
+                            if (m.avatar) {
+                                chip.innerHTML = '<img src="' + m.avatar + '" style="width:16px;height:16px;border-radius:50%;object-fit:cover;"><span>' + emoji + '</span>';
+                            } else {
+                                const initial = (m.name || '?').charAt(0);
+                                chip.innerHTML = '<span style="width:16px;height:16px;border-radius:50%;background:var(--accent-color);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;">' + initial + '</span><span>' + emoji + '</span>';
+                            }
+                            row.appendChild(chip);
+                            requestAnimationFrame(() => { chip.style.opacity = '1'; });
+                        }
+                        if (typeof throttledSaveData === 'function') throttledSaveData();
+                    }, delay);
+                });
+            }
+
+            // 表情包互动：用户发了表情包（有image无text）
             if (typeof messages !== 'undefined' && typeof stickerLibrary !== 'undefined') {
                 const lastMsg = messages[messages.length - 1];
                 if (lastMsg && lastMsg.sender === 'user' && lastMsg.image && !lastMsg.text) {
-                    // 先标记已读（原版simulateReply开头做的事）
+                    // 先标记已读
                     let changed = false;
                     messages.forEach(function(msg) {
                         if (msg.sender === 'user' && msg.status !== 'read') {
@@ -445,6 +495,14 @@
                         if (typeof throttledSaveData === 'function') throttledSaveData();
                     }
 
+                    // 群聊模式：走点赞链接确认（🔮），不回表情包
+                    if (typeof groupChatSettings !== 'undefined' && groupChatSettings.enabled && groupChatSettings.members && groupChatSettings.members.length > 0) {
+                        yyHideTyping();
+                        yyTriggerGroupReactions(lastMsg, true);
+                        return;
+                    }
+
+                    // 单聊模式：回一张表情包（原逻辑）
                     let disabledStickerItems = new Set();
                     try {
                         const raw = localStorage.getItem('disabledStickerItems');
@@ -481,6 +539,17 @@
             }
 
             orig();
+
+            // 群聊日常点赞（❤️）：文字消息也有概率被点赞
+            if (typeof groupChatSettings !== 'undefined' && groupChatSettings.enabled && groupChatSettings.members && groupChatSettings.members.length > 0) {
+                if (typeof messages !== 'undefined' && messages.length > 0) {
+                    const userMsg = messages.filter(m => m.sender === 'user').pop();
+                    if (userMsg) {
+                        yyTriggerGroupReactions(userMsg, false);
+                    }
+                }
+            }
+
             // emoji蹦出
             if (Math.random() < EMOJI_CHANCE) {
                 const name = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
