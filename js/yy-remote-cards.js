@@ -386,17 +386,15 @@
                 }
 
                 const name = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
-                // 概率：YES 35%, NO 35%, UNSURE 15%, SIGNAL LOST 15%
+                // 概率：YES 40%, NO 40%, SIGNAL LOST 20%
                 const roll = Math.random();
                 let reply;
-                if (roll < 0.35) {
-                    reply = '✦˖°·̩̩̥ 𝒴𝐸𝒮 ·̩̩̥°˖✦';
-                } else if (roll < 0.70) {
-                    reply = '✦˖°·̩̩̥ 𝒩𝒪 ·̩̩̥°˖✦';
-                } else if (roll < 0.85) {
-                    reply = '⸸·̩̩̥ ᴜɴsᴜʀᴇ ·̩̩̥⸸';
+                if (roll < 0.4) {
+                    reply = '✦ 𝒀𝑬𝑺 ✦';
+                } else if (roll < 0.8) {
+                    reply = '✧ 𝑵𝑶 ✧';
                 } else {
-                    reply = '.̶.̶.̶s̷i̷g̷n̷a̷l̷ ̷l̷o̷s̷t̷.̶.̶.̶';
+                    reply = '░▒▓ 𝑺𝑰𝑮𝑵𝑨𝑳 𝑳𝑶𝑺𝑻 ▓▒░';
                 }
 
                 // 用原版的延迟范围
@@ -439,7 +437,7 @@
                 if (!members || members.length === 0) return;
 
                 const chance = isLink ? (0.5 + Math.random() * 0.2) : (0.1 + Math.random() * 0.1);
-                const dailyEmojiPool = window._remoteEmojis || ['❤️','😊','✨','💕','🥺','🤗','❓','👏'];
+                const dailyEmojiPool = window._remoteEmojis || ['❤️','😊','✨','🌙','💕','💫','🥺','🤗','🫶','👏'];
                 const reactors = members.filter(() => Math.random() < chance);
                 if (reactors.length === 0) return;
 
@@ -665,7 +663,7 @@
 
     // ========== 用户点赞 emoji 选择器 ==========
     function initUserReactionPicker() {
-        const REACTION_EMOJIS = ['❤️','🔮','✨','😭','😴','😊','🥺','😘','🤗','😉','🫶','👏','💌','🧸','❓'];
+        const REACTION_EMOJIS = ['❤️','🔮','✨','💫','🌙','😊','🥺','😘','🤗','💕','🫶','🌸','🧸','👏','😭'];
 
         document.addEventListener('click', function(e) {
             const btn = e.target.closest('.yy-react-btn');
@@ -774,6 +772,78 @@
         }
     }
 
+    // ========== 群聊角色发言频次统计 ==========
+    function initGroupChatStats() {
+        const statsContainer = document.getElementById('stats-content');
+        if (!statsContainer) return;
+
+        const observer = new MutationObserver(() => {
+            // 每次统计面板重新渲染时注入
+            if (statsContainer.children.length === 0) return;
+            if (statsContainer.querySelector('#yy-group-stats')) return;
+            injectGroupStats(statsContainer);
+        });
+        observer.observe(statsContainer, { childList: true });
+    }
+
+    function injectGroupStats(container) {
+        const section = document.createElement('div');
+        section.id = 'yy-group-stats';
+        section.style.cssText = 'margin-top:16px;padding:14px;background:var(--primary-bg);border:1px solid var(--border-color);border-radius:12px;';
+
+        if (typeof groupChatSettings === 'undefined' || !groupChatSettings.enabled || !groupChatSettings.members || groupChatSettings.members.length === 0) {
+            section.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:8px;display:flex;align-items:center;gap:6px;"><i class="fas fa-users" style="color:var(--accent-color);"></i>群聊发言统计</div><div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:12px 0;">当前未处于群聊模式</div>';
+            container.appendChild(section);
+            return;
+        }
+
+        // 统计每个成员的发言数
+        const allMessages = (typeof messages !== 'undefined') ? messages : [];
+        const nonUserMsgs = allMessages.filter(function(m) { return m.sender !== 'user' && m.type !== 'system'; });
+        const counts = {};
+        groupChatSettings.members.forEach(function(m) { counts[m.name] = 0; });
+
+        nonUserMsgs.forEach(function(m) {
+            if (typeof getGroupMemberForMessage === 'function') {
+                const member = getGroupMemberForMessage(m.id);
+                if (member && counts.hasOwnProperty(member.name)) {
+                    counts[member.name]++;
+                }
+            }
+        });
+
+        const total = nonUserMsgs.length || 1;
+        const sorted = Object.entries(counts).sort(function(a, b) { return b[1] - a[1]; });
+        const maxCount = sorted.length > 0 ? sorted[0][1] : 1;
+
+        let html = '<div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:10px;display:flex;align-items:center;gap:6px;"><i class="fas fa-users" style="color:var(--accent-color);"></i>群聊发言统计</div>';
+
+        sorted.forEach(function(entry) {
+            const name = entry[0];
+            const count = entry[1];
+            const pct = total > 0 ? Math.round(count / total * 100) : 0;
+            const barWidth = maxCount > 0 ? Math.max(4, Math.round(count / maxCount * 100)) : 4;
+            const member = groupChatSettings.members.find(function(m) { return m.name === name; });
+            const avatarHtml = member && member.avatar
+                ? '<img src="' + member.avatar + '" style="width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0;">'
+                : '<div style="width:22px;height:22px;border-radius:50%;background:var(--accent-color);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;font-weight:700;color:#fff;">' + (name || '?').charAt(0) + '</div>';
+
+            html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+                + avatarHtml
+                + '<div style="flex:1;min-width:0;">'
+                + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">'
+                + '<span style="font-size:12px;font-weight:500;color:var(--text-primary);">' + name + '</span>'
+                + '<span style="font-size:11px;color:var(--text-secondary);">' + count + '条 (' + pct + '%)</span>'
+                + '</div>'
+                + '<div style="height:6px;background:var(--border-color);border-radius:3px;overflow:hidden;">'
+                + '<div style="height:100%;width:' + barWidth + '%;background:var(--accent-color);border-radius:3px;transition:width 0.3s;"></div>'
+                + '</div></div></div>';
+        });
+
+        section.innerHTML = html;
+        container.appendChild(section);
+    }
+
     // ========== 初始化 ==========
     async function init() {
         injectStyles();
@@ -781,6 +851,7 @@
         updateDailyMood();
         injectDailyStatus();
         initUserReactionPicker();
+        initGroupChatStats();
 
         // 立刻覆写回信生成（不等simulateReply）
         overrideEnvelopeReply();
@@ -927,6 +998,111 @@
             }
         };
         startObserving();
+    }
+
+    // ========== 群聊角色发言频次统计 ==========
+    function initGroupChatStats() {
+        const statsContent = document.getElementById('stats-content');
+        if (!statsContent) return;
+
+        function renderGroupStats() {
+            // 移除旧的
+            const old = document.getElementById('yy-group-stats');
+            if (old) old.remove();
+
+            const container = document.createElement('div');
+            container.id = 'yy-group-stats';
+            container.style.cssText = 'margin-top:16px;padding:14px;background:var(--primary-bg);border:1px solid var(--border-color);border-radius:12px;';
+
+            const title = document.createElement('div');
+            title.style.cssText = 'font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:10px;display:flex;align-items:center;gap:6px;';
+            title.innerHTML = '<i class="fas fa-users" style="color:var(--accent-color);font-size:12px;"></i>群聊发言统计';
+            container.appendChild(title);
+
+            if (typeof groupChatSettings === 'undefined' || !groupChatSettings.enabled || !groupChatSettings.members || groupChatSettings.members.length === 0) {
+                const hint = document.createElement('div');
+                hint.style.cssText = 'font-size:12px;color:var(--text-secondary);text-align:center;padding:12px 0;';
+                hint.textContent = '当前未处于群聊模式';
+                container.appendChild(hint);
+                statsContent.appendChild(container);
+                return;
+            }
+
+            // 统计每个成员的发言数
+            const allMsgs = (typeof messages !== 'undefined') ? messages : [];
+            const nonUserMsgs = allMsgs.filter(function(m) { return m.sender !== 'user' && m.type !== 'system'; });
+            const freq = {};
+            groupChatSettings.members.forEach(function(m) { freq[m.name] = 0; });
+
+            nonUserMsgs.forEach(function(m) {
+                if (typeof getGroupMemberForMessage === 'function') {
+                    const member = getGroupMemberForMessage(m.id);
+                    if (member && freq.hasOwnProperty(member.name)) {
+                        freq[member.name]++;
+                    }
+                }
+            });
+
+            const total = nonUserMsgs.length || 1;
+            const sorted = Object.entries(freq).sort(function(a, b) { return b[1] - a[1]; });
+            const maxCount = sorted.length > 0 ? sorted[0][1] : 1;
+
+            sorted.forEach(function(entry) {
+                const name = entry[0];
+                const count = entry[1];
+                const pct = Math.round(count / total * 100);
+                const barWidth = Math.max(2, Math.round(count / (maxCount || 1) * 100));
+                const member = groupChatSettings.members.find(function(m) { return m.name === name; });
+
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px;';
+
+                // 头像
+                if (member && member.avatar) {
+                    row.innerHTML += '<img src="' + member.avatar + '" style="width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0;">';
+                } else {
+                    const initial = (name || '?').charAt(0);
+                    row.innerHTML += '<div style="width:24px;height:24px;border-radius:50%;background:var(--accent-color);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + initial + '</div>';
+                }
+
+                // 名字 + 条形图 + 数字
+                const info = document.createElement('div');
+                info.style.cssText = 'flex:1;min-width:0;';
+                info.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">'
+                    + '<span style="font-size:12px;font-weight:500;color:var(--text-primary);">' + name + '</span>'
+                    + '<span style="font-size:11px;color:var(--text-secondary);">' + count + '条 (' + pct + '%)</span>'
+                    + '</div>'
+                    + '<div style="height:6px;background:rgba(var(--accent-color-rgb,180,140,100),0.1);border-radius:3px;overflow:hidden;">'
+                    + '<div style="height:100%;width:' + barWidth + '%;background:var(--accent-color);border-radius:3px;transition:width 0.3s;"></div>'
+                    + '</div>';
+                row.appendChild(info);
+                container.appendChild(row);
+            });
+
+            statsContent.appendChild(container);
+        }
+
+        // 监听 stats-panel 显示时渲染
+        const observer = new MutationObserver(function() {
+            const panel = document.getElementById('stats-panel');
+            if (panel && panel.style.display !== 'none') {
+                setTimeout(renderGroupStats, 100);
+            }
+        });
+        const panel = document.getElementById('stats-panel');
+        if (panel && panel.parentElement) {
+            observer.observe(panel, { attributes: true, attributeFilter: ['style'] });
+            observer.observe(panel.parentElement, { childList: true, subtree: true });
+        }
+
+        // 也监听 tab 切换
+        const origSwitchTab = window.switchStatsTab;
+        if (origSwitchTab) {
+            window.switchStatsTab = function(tab) {
+                origSwitchTab(tab);
+                if (tab === 'stats') setTimeout(renderGroupStats, 150);
+            };
+        }
     }
 
     window.YY_RemoteCards = {
